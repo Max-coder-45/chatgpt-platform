@@ -1,60 +1,43 @@
-
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import os
 
 app = Flask(__name__)
-
-# Get the API key securely from environment variables
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+CORS(app)
 
 @app.route('/')
 def home():
-    return "✅ ChatGPT-like API is live!"
+    return "🧠 ChatGPT API is running!"
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_input = request.json.get("message", "").strip()
+@app.route('/ask', methods=['POST'])
+def ask_ai():
+    data = request.get_json()
+    prompt = data.get('prompt')
 
-    if not user_input:
-        return jsonify({"error": "No message provided"}), 400
-
-    if not OPENROUTER_API_KEY:
-        return jsonify({"error": "API key not found in environment"}), 500
-
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://yourapp.fly.dev",   # 🔁 Replace with your actual Fly.io URL
-        "X-Title": "MyChatPlatform"
-    }
-
-    payload = {
-        "model": "openchat/openchat-3.5-0106",  # ✅ Valid OpenRouter model
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": user_input}
-        ]
-    }
+    if not prompt:
+        return jsonify({'error': 'Missing prompt'}), 400
 
     try:
         response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=payload
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers={
+                "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "openrouter/auto",  # or another free model
+                "messages": [{"role": "user", "content": prompt}]
+            }
         )
-
-        data = response.json()
-
         if response.status_code != 200:
-            return jsonify({"error": data.get("error", "Unknown error")}), response.status_code
+            return jsonify({"error": f"{response.status_code} - {response.text}"}), 500
 
-        return jsonify({
-            "reply": data["choices"][0]["message"]["content"]
-        })
+        completion = response.json()['choices'][0]['message']['content']
+        return jsonify({'response': completion})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host='0.0.0.0', port=81)
