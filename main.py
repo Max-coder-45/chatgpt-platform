@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify 
 from flask_cors import CORS
 import requests
 import os
@@ -26,7 +26,7 @@ def ask_ai():
                 "Content-Type": "application/json"
             },
             json={
-                "model": "openrouter/auto",  # or another free model
+                "model": "openrouter/auto",
                 "messages": [{"role": "user", "content": prompt}]
             }
         )
@@ -40,4 +40,4 @@ def ask_ai():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=81)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
